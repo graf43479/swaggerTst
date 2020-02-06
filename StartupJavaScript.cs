@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using TodoApi.Models;
+using TodoApi.Options;
+using Swashbuckle.Swagger;
 
 namespace TodoApi
 {
@@ -22,31 +24,50 @@ namespace TodoApi
         {
             services.AddDbContext<TodoContext>(opt =>
                opt.UseInMemoryDatabase("TodoList"));
-            services.AddControllers();
+
+            services.AddMvc();
+            
+            services.AddLogging();
+
+           // services.AddControllers();
+            services.AddSwaggerGen(x=>
+            {
+                x.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Some API", Version = "v1" });
+            });
         }
 
         #region snippet_configure
-public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-{
-    if (env.IsDevelopment())
-    {
-        app.UseDeveloperExceptionPage();
-    }
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
+            app.UseHttpsRedirection();
 
-    app.UseHttpsRedirection();
+            app.UseRouting();
 
-    app.UseRouting();
+            app.UseAuthorization();
 
-    app.UseAuthorization();
+            var swaggerOptions = new SwaggerOptions();
+            Configuration.GetSection(nameof(SwaggerOptions)).Bind(swaggerOptions);
+            app.UseSwagger(options =>
+            {
+                options.RouteTemplate = swaggerOptions.JsonRoute;
+            });
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint(swaggerOptions.UIEndpoint, swaggerOptions.Description);
+            });
 
-    app.UseEndpoints(endpoints =>
-    {
-        endpoints.MapControllers();
-    });
-}
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+        }
         #endregion
     }
 }
